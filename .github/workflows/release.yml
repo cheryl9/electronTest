@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+
+      # Windows installer from Linux (same idea as your POS tag workflow)
+      - name: Build Windows installer
+        run: |
+          docker run --rm \
+            -v "${PWD}:/project" \
+            -v "${HOME}/.cache/electron:/root/.cache/electron" \
+            -v "${HOME}/.cache/electron-builder:/root/.cache/electron-builder" \
+            -w /project \
+            electronuserland/builder:wine \
+            npm run build:win
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*.exe"
+          generateReleaseNotes: true
+          allowUpdates: true
