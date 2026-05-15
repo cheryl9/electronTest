@@ -10,27 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-      - run: npm ci
+          cache: npm
 
-      # Windows installer from Linux (same idea as your POS tag workflow)
-      - name: Build Windows installer
+      - name: Build and publish Windows (Wine)
         run: |
           docker run --rm \
+            --env GH_TOKEN="${GH_TOKEN}" \
+            --env ELECTRON_CACHE="/root/.cache/electron" \
+            --env ELECTRON_BUILDER_CACHE="/root/.cache/electron-builder" \
             -v "${PWD}:/project" \
             -v "${HOME}/.cache/electron:/root/.cache/electron" \
             -v "${HOME}/.cache/electron-builder:/root/.cache/electron-builder" \
             -w /project \
             electronuserland/builder:wine \
-            npm run build:win
-
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/*.exe"
-          generateReleaseNotes: true
-          allowUpdates: true
+            bash -c "npm ci && npm run release:win"
